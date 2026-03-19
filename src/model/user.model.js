@@ -34,7 +34,14 @@ const userSchema = new mongoose.Schema({
         type:String,
         enum:["user","admin"],
         default:"user"
-    }   
+    }   ,
+    systemUser:{
+        type:Boolean,
+        default:false,
+        immutable:true,
+        select:false
+    }
+
 
 },{
     timestamps:true 
