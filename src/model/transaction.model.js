@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import crypto from "crypto";
 
 const transactionSchema = new mongoose.Schema({
 
@@ -11,8 +12,8 @@ const transactionSchema = new mongoose.Schema({
     },
     toAccount:{
         type:mongoose.Schema.Types.ObjectId,
-        ref:"Account",
-        required:[true,"To account is required for creating a transaction"],
+        ref:"AccToount",
+        required:[true," account is required for creating a transaction"],
         index:true,
         immutable:true
     },
@@ -55,6 +56,8 @@ const transactionSchema = new mongoose.Schema({
         unique:true,
         sparse:true,
         trim:true,
+        default: () => crypto.randomInt(100000000000, 999999999999).toString(),
+
         match:[
             /^[0-9]{12}$/,
             "Idempotency key must be 12 digits long"

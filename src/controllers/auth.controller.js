@@ -1,6 +1,6 @@
 import userModel from "../model/user.model.js";
 import jwt from "jsonwebtoken";
-import {sendEmail,transporter,sendWelcomeEmail  }from "../services/email.service.js";
+import {sendEmail,transporter,sendWelcomeEmail,sendLoginEmail  }from "../services/email.service.js";
 
 
 /**
@@ -37,16 +37,14 @@ export const registerController = async(req,res)=>{
         password,
         role
     })
-     const token = jwt.sign({id:user._id , role:user.role},process.env.JWT_SECRET,{expiresIn:"1h"});
       
-    console.log(user);
-    const userResponse =  user.toObject();
-    delete userResponse.password;   
-    res.cookie("token",token,{httpOnly:true,secure:true,sameSite:"strict",maxAge:3600000});
-    await user.save();
-    await sendWelcomeEmail(user);
-    
-     res.status(200).json({message:"create success",user:userResponse});
+        const token = jwt.sign({id:user._id , role:user.role},process.env.JWT_SECRET,{expiresIn:"1h"});
+        const userResponse =  user.toObject();
+        delete userResponse.password;   
+        res.cookie("token",token,{httpOnly:true,secure:true,sameSite:"strict",maxAge:3600000});
+        await  sendWelcomeEmail(user,password);
+        await user.save();
+      return res.status(200).json({message:"create success",user:userResponse});
 
    
 
@@ -96,6 +94,7 @@ export const loginController = async(req,res)=>{
           }
           const token = jwt.sign({id:user._id , role:user.role},process.env.JWT_SECRET,{expiresIn:"1h"});
          res.cookie("token",token,{httpOnly:true,secure:true,sameSite:"strict",maxAge:3600000});
+         await sendLoginEmail(user);
           return res.status(200).json({message:" login sucessfully", });
 
     }catch (error){

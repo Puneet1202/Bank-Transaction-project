@@ -3,6 +3,7 @@ import accountModel from "../model/account.model.js";
 import ledgerModel from "../model/ledger.model.js";
 import { sendTransactionEmail,sendFailedTransactionEmail } from '../services/email.service.js'
 import mongoose from "mongoose";
+import crypto from "crypto";
 
 
 /**
@@ -173,13 +174,14 @@ await session.commitTransaction();
      }finally{
         session.endSession();
      }
+    
 }
 
 
 
 export const createInitialFundTransaction = async(req,res)=>{
-    const{toAccount,amount,idempotencyKey} = req.body;
-    if(!toAccount || !amount || !idempotencyKey){
+    const{toAccount,amount} = req.body;
+    if(!toAccount || !amount){
         return res.status(400).json({
             success:false,
             message:"All fields are required"
@@ -203,4 +205,59 @@ export const createInitialFundTransaction = async(req,res)=>{
         })
     }
     
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try{
+        const referenceId = crypto.randomInt(100000000000, 999999999999).toString();
+        const fromBalance = await fromUserAccount.getBalance();
+        const toBalance = await toUserAccount.getBalance();
+
+        const transaction= await transactionModel.create([{
+            fromAccount:fromUserAccount._id,
+            toAccount:toAccount,
+            amount:amount,
+            type:"deposit",
+            referenceId:referenceId,
+        }],{session})
+
+        const debitLedger = await ledgerModel.create([
+            {
+            account:fromUserAccount._id,
+            amount:amount,
+            type:"debit",
+            transaction:transaction[0]._id,
+            balance: fromBalance-amount
+            }],{session})
+           
+            const creditLedger = await ledgerModel.create([
+            {
+            account:toUserAccount._id,
+            amount:amount,
+            type:"credit",
+            transaction:transaction[0]._id,
+            balance:toBalance+amount
+            }],{session})
+
+            //status update
+            transaction[0].status="completed";
+            await transaction[0].save({session});
+            await session.commitTransaction();
+          
+            return res.status(200).json({
+                success:true,
+                message:"Transaction created successfully",
+                data:transaction[0]
+            })
+    }catch(error){
+        await session.abortTransaction();
+        session.endSession();
+        return res.status(500).json({
+            success:false,
+            message:"Transaction failed",
+            error:error.message
+        })
+    }
+    finally{
+        session.endSession();
+    }
 }

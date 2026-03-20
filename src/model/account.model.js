@@ -42,7 +42,7 @@ const accountSchema = new mongoose.Schema({
 
 accountSchema.index({ user: 1, status: 1 })
 
-accountSchema.method.getBalance = async function(){     //methods matlab — har account object pe yeh function available hoga.
+accountSchema.methods.getBalance = async function(){     //methods matlab — har account object pe yeh function available hoga.
 
     const balanceData = await ledgerModel.aggregate([
         //stage 1
