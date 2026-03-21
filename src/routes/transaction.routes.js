@@ -4,7 +4,7 @@ import { authMiddleware , authSystemMiddleware} from "../middlewares/auth.middle
 import { createTransaction,createInitialFundTransaction } from "../controllers/transaction.controller.js";
 
 
-router.post('/transaction',authMiddleware,createTransaction)
+router.post('/transfer',authMiddleware,createTransaction)
 
 
 router.post("/system/initial-fund",authSystemMiddleware,createInitialFundTransaction)

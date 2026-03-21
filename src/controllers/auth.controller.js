@@ -1,4 +1,5 @@
 import userModel from "../model/user.model.js";
+import blackListModel from "../model/blackList.model.js";
 import jwt from "jsonwebtoken";
 import {sendEmail,transporter,sendWelcomeEmail,sendLoginEmail  }from "../services/email.service.js";
 
@@ -104,4 +105,26 @@ export const loginController = async(req,res)=>{
 }
 
 
+/**
+ * @description Logout controller
+ * @base_url /api/auth
+ * @see src/routes/auth.routes.js
+ */
+
+export const logoutController = async(req,res)=>{
+    try{
+        const token = req.cookies.token || req.headers.authorization?.split(" ")[1];
+        if(!token){
+            return res.status(400).json({message:"Token not found"});
+        }
+       
+        res.clearCookie("token");
+        const blackList = await blackListModel.create({
+            token:token
+        })
+        return res.status(200).json({message:"Logout sucessfully" , blackList});
+    }catch(error){
+        return res.status(500).json({message:"Internal server error"});
+    }
+}
 

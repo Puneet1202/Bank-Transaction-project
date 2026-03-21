@@ -1,6 +1,7 @@
 
 import jwt from "jsonwebtoken";
 import userModel from "../model/user.model.js";
+import blackListModel from "../model/blackList.model.js";
 
 
 export const authMiddleware = async(req,res,next)=>{
@@ -8,6 +9,12 @@ export const authMiddleware = async(req,res,next)=>{
     try{
         const token = req.cookies.token || req.headers.authorization?.split(" ")[1];
         if(!token){
+            return res.status(401).json({
+                message:"Unauthorized"
+            })
+        }
+        const isBlacklisted = await blackListModel.findOne({token});
+        if(isBlacklisted){
             return res.status(401).json({
                 message:"Unauthorized"
             })
@@ -31,6 +38,12 @@ export const authSystemMiddleware = async(req,res,next)=>{
     try{
         const token = req.cookies.token || req.headers.authorization?.split(" ")[1];
         if(!token){
+            return res.status(401).json({
+                message:"Unauthorized"
+            })
+        }
+        const isBlacklisted = await blackListModel.findOne({token});
+        if(isBlacklisted){
             return res.status(401).json({
                 message:"Unauthorized"
             })

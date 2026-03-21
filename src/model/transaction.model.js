@@ -35,10 +35,10 @@ const transactionSchema = new mongoose.Schema({
     },
     referenceId:{
         type:String,
-        required:[true,"Reference ID is required for creating a transaction"],
         unique:true,
         trim:true,
         immutable:true,
+        default: () => crypto.randomInt(100000000000, 999999999999).toString(),
         match:[
             /^[0-9]{12}$/,
             "Reference ID must be 12 digits long"

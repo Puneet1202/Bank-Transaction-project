@@ -11,7 +11,6 @@ import crypto from "crypto";
  * the 10 step transfer flow
  *    * validation request
  *    * account validation
- *    * idempotency check
  *    * account status validation
  *    * currency validation
  *    * balance validation
@@ -24,9 +23,9 @@ import crypto from "crypto";
 
 export const createTransaction = async(req,res)=>{
  //stage 1 validation
-    const { fromAccount, toAccount, amount, type, idempotencyKey } = req.body;
+    const { fromAccount, toAccount, amount, type } = req.body;
 
-    if(!fromAccount || !toAccount || !amount || !type || !idempotencyKey){
+    if(!fromAccount || !toAccount || !amount || !type){
         return res.status(400).json({
             success:false,
             message:"All fields are required"
@@ -42,20 +41,6 @@ export const createTransaction = async(req,res)=>{
         })
     }
 
-    //stage 3 idempotency check
-       if (idempotencyKey) {
-
-    const isTransactionAlreadyExists = await transactionModel.findOne({
-        idempotencyKey: idempotencyKey
-    })
-
-    if (isTransactionAlreadyExists) {
-        return res.status(400).json({
-            success: false,
-            message: `Transaction already ${isTransactionAlreadyExists.status}`
-        })
-    }
-}
 
     //stage 4 account status validation
     if(fromUserAccount.status!=="Active" || toUserAccount.status!=="Active"){
@@ -96,7 +81,6 @@ const transaction = await transactionModel.create([{
     toAccount:toAccount,
     amount:amount,
     type:type,
-    idempotencyKey:idempotencyKey,
 
 }],{session})   
  //stage 7 create ledger
@@ -106,7 +90,7 @@ const debitLedger = await ledgerModel.create([
     amount:amount,
     type:"debit",
     transaction:transaction[0]._id,
-    balance:fromUserAccount.balance
+    balance: fromBalance - amount
 }],{session})
 
 const creditLedger = await ledgerModel.create([
@@ -144,16 +128,6 @@ await session.commitTransaction();
         amount,
         type);
 
-        await sendFailedTransactionEmail(
-            fromUserAccount.user.email,
-            fromUserAccount.user.username,
-            amount,
-            type);
-        await sendFailedTransactionEmail(
-            toUserAccount.user.email,
-            toUserAccount.user.username,
-            amount,
-            type);
       
 
      return res.status(200).json({

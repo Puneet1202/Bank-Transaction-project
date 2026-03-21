@@ -53,7 +53,11 @@ export const createAccountController = async(req,res)=>{
 
 }
 
-
+/**
+ * @description get all accounts logged in user
+ * @route GET /api/account/get
+ * @access Private
+ */
 
 export const getUserAccountController=async(req,res)=>{
    const user = req.user;
@@ -64,4 +68,28 @@ export const getUserAccountController=async(req,res)=>{
     return res.status(404).json({message:"Account not found"});
    }
    return res.status(200).json({message:"Account found successfully",account});
+}
+
+
+
+/**
+ * @description get all accounts logged in user and show balance
+ * @route GET /api/account/Balance/:accountId
+ * @access Private
+ */
+
+export const getBalanceController=async(req,res)=>{
+    const {accountId} = req.params;
+
+    const account = await accountModel.findOne({
+      _id:accountId,
+      user:req.user.id
+    })
+    if(!account){
+        return res.status(404).json({message:"Account not found"});
+    }
+        const balance = await  account.getBalance();
+
+    return res.status(200).json({message:"Account found successfully",balance});
+   
 }
