@@ -39,7 +39,7 @@ A secure backend REST API for a banking system built with Node.js, Express, and 
 ---
 
 ## 📁 Project Structure
-
+```
 src/
 ├── controllers/
 │   ├── auth.controller.js
@@ -62,8 +62,7 @@ src/
 ├── seed/
 │   └── system.seed.js
 server.js   --out-side src folder
----
-
+```
 ## ⚙️ Environment Variables
 
 Create a `.env` file in root directory:
