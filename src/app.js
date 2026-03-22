@@ -9,6 +9,14 @@ import transactionRoutes from "./routes/transaction.routes.js";
 app.use(express.json());
 app.use(express.urlencoded({extended:true}));
 app.use(cookieParser());
+
+app.get("/", (req, res) => {
+    res.status(200).json({
+        message: "Bank Transaction API ✅",
+        status: "running",
+        timestamp: new Date()
+    })
+})
  
 
  
