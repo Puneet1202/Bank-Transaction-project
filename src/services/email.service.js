@@ -124,6 +124,7 @@ const createTransporter = () => {
   if (process.env.NODE_ENV === 'production') {
     return nodemailer.createTransport({
       service: 'gmail',
+       family: 4,
       auth: {
         type: 'OAuth2',
         user: process.env.EMAIL_USER,
