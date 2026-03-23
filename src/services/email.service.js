@@ -123,7 +123,8 @@ import nodemailer from "nodemailer";
 const createTransporter = () => {
   if (process.env.NODE_ENV === 'production') {
     return nodemailer.createTransport({
-      service: 'gmail',
+        host: 'smtp.gmail.com',
+        port: 587,
        family: 4,
       auth: {
         type: 'OAuth2',
