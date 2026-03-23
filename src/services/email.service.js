@@ -115,141 +115,112 @@
 //   await sendEmail(userEmail, subject, text, html);
 // }
 
-
-
-
 import nodemailer from "nodemailer";
+import * as Brevo from '@getbrevo/brevo';
 
-const createTransporter = () => {
-  if (process.env.NODE_ENV === 'production') {
-    return nodemailer.createTransport({
-        host: 'smtp.gmail.com',
-        port: 587,
-       family: 4,
-      auth: {
-        type: 'OAuth2',
-        user: process.env.EMAIL_USER,
-        clientId: process.env.CLIENT_ID,
-        clientSecret: process.env.CLIENT_SECRET,
-        refreshToken: process.env.REFRESH_TOKEN,
-      }
-    });
-  } else {
-    return nodemailer.createTransport({
-      host: process.env.MAILTRAP_HOST,
-      port: process.env.MAILTRAP_PORT,
-      auth: {
+// Brevo Setup (Production ke liye)
+const apiInstance = new Brevo.TransactionalEmailsApi();
+if (process.env.NODE_ENV === 'production') {
+    apiInstance.setApiKey(Brevo.TransactionalEmailsApiApiKeys.apiKey, process.env.BREVO_API_KEY);
+}
+
+// Mailtrap Setup (Local ke liye)
+const mailtrapTransporter = nodemailer.createTransport({
+    host: process.env.MAILTRAP_HOST,
+    port: process.env.MAILTRAP_PORT,
+    auth: {
         user: process.env.MAILTRAP_USER,
         pass: process.env.MAILTRAP_PASS
-      }
-    });
-  }
-};
-
-export const transporter = createTransporter();
-
-// Verify silently - server crash nahi karega
-transporter.verify((error) => {
-  if (error) {
-    console.error('Email server connection failed:', error.message);
-  } else {
-    console.log('Email server is ready');
-  }
+    }
 });
 
-export const sendEmail = async (to, subject, text, html) => {
-  try {
-    const info = await transporter.sendMail({
-      from: `"Bank Transaction" <${process.env.EMAIL_USER}>`,
-      to,
-      subject,
-      text,
-      html,
-    });
-    console.log('Email sent:', info.messageId);
-  } catch (error) {
-    console.error('Email sending failed:', error.message);
-    // API crash nahi hogi
-  }
+/**
+ * Modern HTML Wrapper - Sabhi emails ka base design
+ */
+const emailWrapper = (content) => `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #eee; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+        <div style="background: #4F46E5; padding: 20px; text-align: center; color: white;">
+            <h1 style="margin: 0; font-size: 24px;">💰 Bank App</h1>
+        </div>
+        <div style="padding: 30px; line-height: 1.6; color: #333;">
+            ${content}
+        </div>
+        <div style="background: #f9fafb; padding: 15px; text-align: center; font-size: 12px; color: #6b7280;">
+            © 2026 Bank App. Secure Transactions.
+        </div>
+    </div>
+`;
+
+export const sendEmail = async (to, subject, html) => {
+    try {
+        if (process.env.NODE_ENV === 'production') {
+            // PRODUCTION: Brevo API use karein
+            const sendSmtpEmail = new Brevo.SendSmtpEmail();
+            sendSmtpEmail.subject = subject;
+            sendSmtpEmail.htmlContent = html;
+            sendSmtpEmail.sender = { "name": "Bank App", "email": "punitkumar2121999@gmail.com" };
+            sendSmtpEmail.to = [{ "email": to }];
+
+            await apiInstance.sendTransacEmail(sendSmtpEmail);
+            console.log('✅ Email sent via Brevo API');
+        } else {
+            // LOCAL: Mailtrap
+            await mailtrapTransporter.sendMail({
+                from: '"Bank App" <test@example.com>',
+                to,
+                subject,
+                html,
+            });
+            console.log('🧪 Email sent via Mailtrap');
+        }
+    } catch (error) {
+        console.error('❌ Email Error:', error.message);
+    }
 };
 
-export const sendWelcomeEmail = async (user, password) => {
-  try {
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      to: user.email,
-      subject: "Welcome to Bank App",
-      html: `
-        <h1>Welcome ${user.username}!</h1>
-        <p>Your account has been created successfully.</p>
-        <p><b>Email:</b> ${user.email}</p>
-        <p><b>Password:</b> ${password}</p>
-        <p>Please keep this safe!</p>
-      `
-    });
-  } catch (error) {
-    console.error('Welcome email failed:', error.message);
-  }
+// --- Beautifully Designed Helper Functions ---
+
+export const sendWelcomeEmail = (user, password) => {
+    const html = emailWrapper(`
+        <h2 style="color: #4F46E5;">Welcome, ${user.username}!</h2>
+        <p>Your account has been created successfully. Login with the credentials below:</p>
+        <div style="background: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 5px 0;"><b>Email:</b> ${user.email}</p>
+            <p style="margin: 5px 0;"><b>Password:</b> ${password}</p>
+        </div>
+        <p>Please change your password after logging in for security.</p>
+    `);
+    sendEmail(user.email, "Welcome to Bank App", html);
 };
 
-export const sendLoginEmail = async (user) => {
-  try {
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      to: user.email,
-      subject: "Login to Bank App",
-      html: `
-        <h1>Welcome ${user.username}!</h1>
-        <p>Your account has been logged in successfully.</p>
-        <p><b>Email:</b> ${user.email}</p>
-      `
-    });
-  } catch (error) {
-    console.error('Login email failed:', error.message);
-  }
+export const sendLoginEmail = (user) => {
+    const html = emailWrapper(`
+        <h2 style="color: #10B981;">New Login Detected</h2>
+        <p>Hello ${user.username},</p>
+        <p>Your account was just logged in from a new session. If this wasn't you, please secure your account.</p>
+        <p><b>Time:</b> ${new Date().toLocaleString()}</p>
+    `);
+    sendEmail(user.email, "Login Alert - Bank App", html);
 };
 
-export const sendCreateAccountEmail = async (user, accountNumber) => {
-  try {
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      to: user.email,
-      subject: "Account Created - Bank App",
-      html: `
-        <h1>Welcome ${user.username}!</h1>
-        <p>Your bank account has been created successfully.</p>
-        <p><b>Email:</b> ${user.email}</p>
-        <p><b>Account Number:</b> ${accountNumber}</p>
-        <p>Please keep this safe!</p>
-      `
-    });
-  } catch (error) {
-    console.error('Create account email failed:', error.message);
-  }
+export const sendTransactionEmail = (userEmail, name, amount, type) => {
+    const color = type.toLowerCase() === 'credit' ? '#10B981' : '#EF4444';
+    const html = emailWrapper(`
+        <h2 style="color: ${color};">Transaction Alert</h2>
+        <p>Hello <b>${name}</b>,</p>
+        <p>Your account has been <b>${type}ed</b> with an amount of:</p>
+        <h1 style="color: ${color}; margin: 10px 0;">₹${amount}</h1>
+        <p>Check your dashboard for updated balance.</p>
+    `);
+    sendEmail(userEmail, "Bank Transaction Alert", html);
 };
 
-export const sendTransactionEmail = async (userEmail, name, amount, type) => {
-  try {
-    await sendEmail(
-      userEmail,
-      "Transaction Alert",
-      `Transaction Alert, ${name}, ${amount}, ${type}!`,
-      `<h1>Transaction Alert, ${name}, ${amount}, ${type}!</h1>`
-    );
-  } catch (error) {
-    console.error('Transaction email failed:', error.message);
-  }
-};
-
-export const sendFailedTransactionEmail = async (userEmail, name, amount, type) => {
-  try {
-    await sendEmail(
-      userEmail,
-      "Transaction Failed",
-      `Transaction Failed, ${name}, ${amount}, ${type}!`,
-      `<h1>Transaction Failed, ${name}, ${amount}, ${type}!</h1>`
-    );
-  } catch (error) {
-    console.error('Failed transaction email failed:', error.message);
-  }
+export const sendFailedTransactionEmail = (userEmail, name, amount, type) => {
+    const html = emailWrapper(`
+        <h2 style="color: #EF4444;">Transaction Failed</h2>
+        <p>Hi ${name},</p>
+        <p>The attempted transaction of <b>₹${amount}</b> was failed due to technical issues.</p>
+        <p>Don't worry, no money was deducted from your account.</p>
+    `);
+    sendEmail(userEmail, "Alert: Transaction Failed", html);
 };

@@ -38,14 +38,18 @@ export const registerController = async(req,res)=>{
         password,
         role
     })
-      
+        await user.save();
         const token = jwt.sign({id:user._id , role:user.role},process.env.JWT_SECRET,{expiresIn:"1h"});
         const userResponse =  user.toObject();
         delete userResponse.password;   
-        res.cookie("token",token,{httpOnly:true,secure:true,sameSite:"strict",maxAge:3600000});
-        await  sendWelcomeEmail(user,password);
-        await user.save();
-      return res.status(200).json({message:"create success",user:userResponse});
+        res.cookie("token",token,{httpOnly:true,
+            secure:true,
+            sameSite:"strict",
+            secure: process.env.NODE_ENV === 'production',
+            maxAge:3600000});
+        sendWelcomeEmail(user,password);
+      
+      return res.status(201).json({message:"create success",user:userResponse});
 
    
 
