@@ -18,7 +18,7 @@ A secure backend REST API for a banking system built with Node.js, Express, and 
 - ✅ Ledger System (Balance Tracking)
 - ✅ Idempotency Key (Duplicate Transaction Prevention)
 - ✅ MongoDB Sessions (Atomic Transactions)
-- ✅ Email Notifications (Mailtrap/Gmail)
+- ✅ Email Notifications (Brevo REST API)
 - ✅ Seed File (Auto System Account Setup)
 
 ---
@@ -33,7 +33,7 @@ A secure backend REST API for a banking system built with Node.js, Express, and 
 | Mongoose | ODM |
 | JWT | Authentication |
 | Bcrypt | Password Hashing |
-| Nodemailer | Email Service |
+| Brevo API | Email Service (REST API) |
 | Dotenv | Environment Variables |
 
 ---
@@ -69,21 +69,13 @@ Create a `.env` file in root directory:
 
 ```env
 PORT=8000
-MONGO_URI=your_mongodb_uri
+MONGODB_URI=your_mongodb_uri
 JWT_SECRET=your_jwt_secret
-NODE_ENV=development
+NODE_ENV=production
 
-# Mailtrap (Development)
-MAILTRAP_HOST=sandbox.smtp.mailtrap.io
-MAILTRAP_PORT=2525
-MAILTRAP_USER=your_mailtrap_user
-MAILTRAP_PASS=your_mailtrap_pass
-
-# Gmail OAuth2 (Production)
-EMAIL_USER=your_gmail
-CLIENT_ID=your_client_id
-CLIENT_SECRET=your_client_secret
-REFRESH_TOKEN=your_refresh_token
+# Brevo Email API
+BREVO_API_KEY=your_brevo_api_key
+EMAIL_USER=your_email
 ```
 
 ---
@@ -174,11 +166,27 @@ Transfer (User → User):
 
 ---
 
-## 📧 Email Notifications
+## 📧 Email Notifications (Brevo REST API)
 
 - Welcome email on registration
-- Login notification
-- Transaction alerts
+- Login security alert
+- Account creation confirmation
+- Transaction alerts (credit/debit)
+- Failed transaction notification
+
+> Uses Brevo REST API (HTTPS) instead of SMTP — works reliably on cloud platforms like Render.
+
+---
+
+## 🔮 Upcoming Features
+
+- 🔜 Rate Limiting (Brute force protection)
+- 🔜 Input Validation (express-validator)
+- 🔜 API Documentation (Swagger/OpenAPI)
+- 🔜 Unit & Integration Tests
+- 🔜 Password Reset via Email
+- 🔜 Transaction History with Pagination
+- 🔜 Account Statement Export (PDF)
 
 ---
 
