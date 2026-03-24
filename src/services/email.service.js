@@ -1,34 +1,68 @@
 // email.service.js - No SDK needed!
 
+// ===== PRODUCTION DEBUG: Check env vars at startup =====
+console.log('📧 [EMAIL SERVICE] Initializing...');
+console.log('📧 [EMAIL SERVICE] BREVO_API_KEY set:', process.env.BREVO_API_KEY ? `YES (${process.env.BREVO_API_KEY.substring(0, 10)}...)` : '❌ NOT SET');
+console.log('📧 [EMAIL SERVICE] NODE_ENV:', process.env.NODE_ENV || 'not set');
+
 export const transporter = {
     sendMail: async (options) => {
-        const response = await fetch('https://api.brevo.com/v3/smtp/email', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'api-key': process.env.BREVO_API_KEY
-            },
-            body: JSON.stringify({
-                subject: options.subject,
-                htmlContent: options.html,
-                sender: { name: "Bank App", email: "puneet.workdesk@gmail.com" },
-                to: [{ email: options.to }]
-            })
-        });
+        console.log('📧 [EMAIL] Attempting to send email to:', options.to);
+        console.log('📧 [EMAIL] Subject:', options.subject);
 
-        if (!response.ok) {
-            const err = await response.json();
-            throw new Error(err.message || 'Email send failed');
+        if (!process.env.BREVO_API_KEY) {
+            throw new Error('BREVO_API_KEY environment variable is not set!');
         }
 
-        return response.json();
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 10000); // 10s timeout
+
+        try {
+            console.log('📧 [EMAIL] Making fetch request to Brevo API...');
+            const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+                method: 'POST',
+                signal: controller.signal,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'api-key': process.env.BREVO_API_KEY
+                },
+                body: JSON.stringify({
+                    subject: options.subject,
+                    htmlContent: options.html,
+                    sender: { name: "Bank App", email: "puneet.workdesk@gmail.com" },
+                    to: [{ email: options.to }]
+                })
+            });
+
+            clearTimeout(timeout);
+            console.log('📧 [EMAIL] Brevo API response status:', response.status, response.statusText);
+
+            if (!response.ok) {
+                const err = await response.json();
+                console.error('📧 [EMAIL] ❌ Brevo API error:', JSON.stringify(err));
+                throw new Error(err.message || 'Email send failed');
+            }
+
+            const result = await response.json();
+            console.log('📧 [EMAIL] ✅ Email sent! Response:', JSON.stringify(result));
+            return result;
+        } catch (error) {
+            clearTimeout(timeout);
+            if (error.name === 'AbortError') {
+                console.error('📧 [EMAIL] ❌ Request TIMED OUT after 10s — Render may be blocking outbound requests');
+                throw new Error('Email request timed out after 10 seconds');
+            }
+            console.error('📧 [EMAIL] ❌ Fetch error:', error.name, error.message);
+            console.error('📧 [EMAIL] ❌ Full error:', error);
+            throw error;
+        }
     },
     verify: (callback) => callback(null)
 };
 
 transporter.verify((error) => {
     if (error) console.error('Email server error:', error);
-    else console.log('Email server (API Mode) is ready');
+    else console.log('📧 [EMAIL SERVICE] Ready (API Mode)');
 });
 
 const emailHTML = (title, content) => `
@@ -49,9 +83,10 @@ const emailHTML = (title, content) => `
 export const sendEmail = async (to, subject, text, html) => {
     try {
         await transporter.sendMail({ to, subject, html });
-        console.log('✅ Email sent successfully via Brevo API');
+        console.log('✅ Email sent successfully via Brevo API to:', to);
     } catch (error) {
         console.error('❌ Email sending failed:', error.message);
+        console.error('❌ Error details:', error.stack);
     }
 };
 
